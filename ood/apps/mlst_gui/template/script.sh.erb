@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# MLST GUI OOD batch_connect script.
+# $port (uvicorn) is exported by before.sh.
+
+echo "=== MLST GUI Session Starting ==="
+echo "uvicorn:${port}"
+
+# Shared conda env installed at the tool root.
+# Falls back to a personal install if the shared env is absent.
+SHARED_ENV=/srv/kapurlab/tools/mlst_gui/env
+PERSONAL_ENV=/home/${USER}/miniforge3/envs/mlst
+PERSONAL_BASE_PYTHON=/home/${USER}/miniforge3/bin/python
+
+if [ -d "${SHARED_ENV}" ] && [ -x "${SHARED_ENV}/bin/python" ]; then
+  MLST_ENV="${SHARED_ENV}"
+  PYTHON="${SHARED_ENV}/bin/python"
+elif [ -d "${PERSONAL_ENV}" ]; then
+  MLST_ENV="${PERSONAL_ENV}"
+  PYTHON="${PERSONAL_ENV}/bin/python"
+else
+  MLST_ENV=""
+  PYTHON="${PERSONAL_BASE_PYTHON}"
+fi
+
+# Tool source (shared install only — no per-user fallback for the app itself)
+MLST_GUI=/srv/kapurlab/tools/mlst_gui
+
+# Add the conda env bin and the mlst bin/ scripts to PATH
+export PATH="${MLST_ENV}/bin:${PATH}"
+# PYTHONPATH lets the mlst CLI scripts find each other (local imports in bin/)
+export PYTHONPATH="${MLST_GUI}/bin:${PYTHONPATH}"
+
+cd "${MLST_GUI}/backend"
+echo "Starting uvicorn on port ${port}"
+echo "  conda env:  ${MLST_ENV}"
+echo "  mlst_gui:   ${MLST_GUI}"
+exec $PYTHON -m uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port "${port}" \
+    --log-level info

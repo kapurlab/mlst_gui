@@ -1,0 +1,95 @@
+# scheme_organism_map.yaml
+#
+# Maps a PubMLST scheme name (as `mlst` reports it in the SCHEME column / JSON
+# `scheme` field) to an AMRFinderPlus `--organism` token. amr_plus_gui reads
+# `organism_token` out of mlst_result.json to corroborate Kraken's organism
+# call and to pick the right AMRFinderPlus organism for point-mutation
+# screening.
+#
+# Notes:
+#  - Keys are matched case-insensitively after stripping a trailing numeric
+#    variant suffix where the variant maps to the same organism (e.g.
+#    `abaumannii_2` -> `abaumannii`); the loader also tries the exact key first.
+#  - `species_guess` (a human-readable label) is derived from the token by the
+#    pipeline; this file only needs the token.
+#  - AMRFinderPlus accepts only a fixed list of `--organism` values. Schemes
+#    that have no matching AMRFinderPlus organism are intentionally left out
+#    (they resolve to an empty token, and amr_plus_gui then runs AMRFinderPlus
+#    without `--organism`). See `amrfinder --list_organisms` for the canonical
+#    list.
+
+# --- Acinetobacter ---
+abaumannii: Acinetobacter_baumannii
+abaumannii_2: Acinetobacter_baumannii
+
+# --- Burkholderia ---
+bcc: Burkholderia_cepacia
+bpseudomallei: Burkholderia_pseudomallei
+
+# --- Campylobacter ---
+campylobacter: Campylobacter
+campylobacter_nonjejuni: Campylobacter
+campylobacter_nonjejuni_2: Campylobacter
+campylobacter_nonjejuni_3: Campylobacter
+campylobacter_nonjejuni_4: Campylobacter
+campylobacter_nonjejuni_5: Campylobacter
+campylobacter_nonjejuni_6: Campylobacter
+campylobacter_nonjejuni_7: Campylobacter
+campylobacter_nonjejuni_8: Campylobacter
+campylobacter_nonjejuni_9: Campylobacter
+
+# --- Clostridioides / Clostridium ---
+cdifficile: Clostridioides_difficile
+cdifficile_2: Clostridioides_difficile
+
+# --- Enterococcus ---
+efaecalis: Enterococcus_faecalis
+efaecium: Enterococcus_faecium
+
+# --- Escherichia / Shigella ---
+ecoli: Escherichia
+ecoli_achtman_4: Escherichia
+ecoli_2: Escherichia
+senterica_achtman_2: Salmonella
+
+# --- Haemophilus ---
+hinfluenzae: Haemophilus_influenzae
+
+# --- Helicobacter ---
+helicobacter: Helicobacter_pylori
+hpylori: Helicobacter_pylori
+
+# --- Klebsiella ---
+kpneumoniae: Klebsiella_pneumoniae
+koxytoca: Klebsiella_oxytoca
+kaerogenes: Klebsiella_pneumoniae
+
+# --- Listeria ---
+lmonocytogenes: Listeria_monocytogenes
+
+# --- Neisseria ---
+neisseria: Neisseria_gonorrhoeae
+ngono: Neisseria_gonorrhoeae
+
+# --- Pseudomonas ---
+paeruginosa: Pseudomonas_aeruginosa
+
+# --- Salmonella ---
+senterica: Salmonella
+
+# --- Staphylococcus ---
+saureus: Staphylococcus_aureus
+sepidermidis: Staphylococcus_pseudintermedius
+spseudintermedius: Staphylococcus_pseudintermedius
+
+# --- Streptococcus ---
+spneumoniae: Streptococcus_pneumoniae
+sagalactiae: Streptococcus_agalactiae
+spyogenes: Streptococcus_pyogenes
+
+# --- Vibrio ---
+vcholerae: Vibrio_cholerae
+vcholerae_2: Vibrio_cholerae
+vibrio: Vibrio_cholerae
+vparahaemolyticus: Vibrio_parahaemolyticus
+vvulnificus: Vibrio_vulnificus

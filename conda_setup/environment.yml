@@ -1,0 +1,47 @@
+# Environment for the MLST GUI
+# Install with:
+#   conda env create -p /srv/kapurlab/tools/mlst_gui/env -f conda_setup/environment.yml
+# or (personal fallback):
+#   conda env create -n mlst -f conda_setup/environment.yml
+name: mlst
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+
+  # Sequence typing core
+  - mlst            # Torsten Seemann's MLST (bundles a PubMLST snapshot)
+  - any2fasta       # mlst input conversion (FASTA/GenBank/EMBL, gzipped)
+  - blast           # mlst uses blastn against its allele db
+
+  # Assembly (assemble-if-reads path)
+  - shovill         # preferred isolate assembler (SPAdes wrapper)
+  - spades          # fallback assembler (spades.py --isolate)
+  - seqkit          # FASTA/FASTQ utilities
+  - samtools
+
+  # Scientific / parsing helpers
+  - biopython
+  - pandas
+
+  # Web backend (FastAPI serves the GUI under OOD)
+  - fastapi>=0.115.0
+  - uvicorn-standard
+  - aiofiles
+  - jinja2
+
+  - pip:
+      - pydantic>=2.0.0
+
+# Notes:
+#  - `mlst` ships a bundled PubMLST database; no separate download is required
+#    to get started. Verify with `mlst --list` (should print many schemes).
+#  - The legacy `mlst-download_pub_mlst` refresh script is deprecated. To
+#    refresh the DB, use the MDU-PHL `mlstdb` tooling and a PubMLST API key,
+#    then point MLST_DB / the GUI "PubMLST database path" at the new copy.
+#  - Node.js for the frontend build is provided by the system (npm), so it is
+#    not listed here; add `nodejs` if you need it inside this env.

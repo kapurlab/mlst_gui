@@ -1,0 +1,7 @@
+---
+name: MLST (dev)
+description: "Dev: branch-picker test environment. Not for production data."
+icon: fa://flask
+category: Bioinformatics
+subcategory: Sequence Typing (dev)
+role: batch_connect
