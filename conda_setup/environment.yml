@@ -14,7 +14,9 @@ dependencies:
   - pip
 
   # Sequence typing core
-  - mlst            # Torsten Seemann's MLST (bundles a PubMLST snapshot)
+  - mlst>=2.23      # Torsten Seemann's MLST (bundles a PubMLST snapshot); pin
+                    # >=2.23 so the solver can't regress to an ancient 2.11 with
+                    # a years-old scheme set (seen on this box without the pin).
   - any2fasta       # mlst input conversion (FASTA/GenBank/EMBL, gzipped)
   - blast           # mlst uses blastn against its allele db
 
