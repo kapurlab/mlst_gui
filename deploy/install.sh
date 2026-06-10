@@ -119,6 +119,10 @@ else
   MLST=""
 fi
 if [[ -n "$MLST" && $DRY_RUN -eq 0 ]]; then
+  # mlst is a Perl script with `#!/usr/bin/env perl`; it must run with the env's
+  # bin on PATH so it uses the env Perl (which carries List::MoreUtils etc.),
+  # not the system Perl. The OOD session does this too (PATH=$ENV/bin:$PATH).
+  export PATH="${ENV_BIN}:${PATH}"
   "$MLST" --version || warn "mlst --version failed"
   scheme_count="$("$MLST" --list 2>/dev/null | wc -w | tr -d ' ')"
   if [[ "${scheme_count:-0}" -gt 0 ]]; then
