@@ -1,0 +1,7 @@
+---
+name: MLST (sandbox)
+description: "Multi-locus sequence typing — autodetect the PubMLST scheme and report the sequence type (ST) for WGS isolates"
+icon: fa://barcode
+category: Bioinformatics
+subcategory: Sequence Typing
+role: batch_connect
