@@ -1121,6 +1121,26 @@ def api_job_file(job_id: str, path: str = Query(...), inline: int = 0):
     return FileResponse(target, media_type=media_type, headers=headers)
 
 
+# Plain (non-streaming) status + log — polled by the UI instead of SSE, because
+# the OOD /rnode Apache proxy holds SSE open and corrupts concurrent sibling
+# requests. Plain GETs are proxy-safe. MUST be before the SPA catch-all.
+@app.get("/api/jobs/{job_id}/logtext")
+def job_logtext(job_id: str):
+    job = job_manager.get_job(job_id)
+    if job is None:
+        raise HTTPException(404, "Job not found")
+    text = ""
+    try:
+        lp = job.get("log_path")
+        if lp and Path(lp).is_file():
+            text = Path(lp).read_text(encoding="utf-8", errors="replace")
+            if len(text) > 30000:
+                text = "...(earlier log truncated)...\n" + text[-30000:]
+    except OSError:
+        pass
+    return JSONResponse({"status": job.get("status"), "exit_code": job.get("exit_code"), "log": text})
+
+
 # ---------------------------------------------------------------------------
 # Static frontend — must be last (catches everything not matched above)
 # ---------------------------------------------------------------------------
