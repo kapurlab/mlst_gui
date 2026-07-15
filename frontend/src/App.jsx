@@ -35,6 +35,8 @@ export default function App() {
   const [activeProject, setActiveProject] = useState(""); // project the Inputs pane targets
   const [addPath, setAddPath] = useState({});       // proj -> import path string
   const [sraText, setSraText] = useState({});       // proj -> SRA accessions string
+  const [fastaText, setFastaText] = useState({});   // proj -> genome-accession string
+  const [fastaRename, setFastaRename] = useState(true);
   const [addStatus, setAddStatus] = useState({});   // proj -> status message
   const [inputsByProj, setInputsByProj] = useState({}); // proj -> {files,count,total_bytes}
   const uploadProjRef = useRef("");                 // which project the file dialog targets
@@ -268,6 +270,33 @@ export default function App() {
       setLogLines([]);
       streamLogUntilDone(data.job_id, null, () => {
         setStat(name, "Download finished — see samples below.");
+        refreshAfterLoad(name);
+      });
+    } catch (e) {
+      setStat(name, `Download failed: ${e.message}`);
+    }
+  }
+
+  async function fastaDownload(name) {
+    const accessions = parseAccessions(fastaText[name]);
+    if (!accessions.length) return;
+    setStat(name, `Fetching ${accessions.length} genome${accessions.length === 1 ? "" : "s"}…`);
+    setShowLogs(true);
+    try {
+      const res = await fetch(`./api/projects/${encodeURIComponent(name)}/fasta/download`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accessions, rename: fastaRename }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setStat(name, `Download failed: ${data.detail || res.status}`); return; }
+      setStat(name, "Downloading genomes… progress shows in the Pipeline Log below.");
+      setFastaText((m) => ({ ...m, [name]: "" }));
+      setJobId(data.job_id);
+      setJobStatus("running");
+      setLogLines([]);
+      streamLogUntilDone(data.job_id, null, () => {
+        setStat(name, "Genome download finished — see samples below.");
         refreshAfterLoad(name);
       });
     } catch (e) {
@@ -987,6 +1016,29 @@ export default function App() {
                         Download{parseAccessions(sraText[activeProject]).length ? ` (${parseAccessions(sraText[activeProject]).length})` : ""}
                       </button>
                       <div className="form-hint">Runs in the background; progress appears in the Pipeline Log.</div>
+                    </div>
+
+                    <div className="input-column">
+                      <h3>Download genome FASTA by accession</h3>
+                      <textarea
+                        rows={6}
+                        placeholder={"GenBank/RefSeq accessions (NC_/CP_…)\nor assembly (GCA_/GCF_) — one per line"}
+                        value={fastaText[activeProject] || ""}
+                        onChange={(e) => setFastaText((m) => ({ ...m, [activeProject]: e.target.value }))}
+                        style={{ resize: "vertical", fontFamily: "inherit" }}
+                      />
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, margin: "4px 0" }}>
+                        <input type="checkbox" checked={fastaRename} onChange={(e) => setFastaRename(e.target.checked)} />
+                        Name files by organism / strain metadata (recommended)
+                      </label>
+                      <button
+                        style={{ width: "100%" }}
+                        onClick={() => fastaDownload(activeProject)}
+                        disabled={!parseAccessions(fastaText[activeProject]).length || running}
+                      >
+                        Fetch FASTA{parseAccessions(fastaText[activeProject]).length ? ` (${parseAccessions(fastaText[activeProject]).length})` : ""}
+                      </button>
+                      <div className="form-hint">Fetches assembled genomes into download/. MLST can type an assembly directly — no reads/assembly step needed. Same downloader as kSNP/GenoFLU.</div>
                     </div>
                   </div>
                 )}

@@ -469,6 +469,43 @@ def api_project_sra_download(name: str, payload: SraRequest):
     return JSONResponse({"job_id": job_id})
 
 
+class FastaDownloadRequest(BaseModel):
+    accessions: List[str]
+    rename: bool = True      # save metadata-derived names (organism/strain) vs bare accession
+
+
+@app.post("/api/projects/{name}/fasta/download")
+def api_project_fasta_download(name: str, payload: FastaDownloadRequest):
+    """Download genome FASTAs by accession into download/ as a background job.
+
+    GCA/GCF assembly accessions go through the NCBI `datasets` CLI (with
+    metadata-derived names); other (nucleotide) accessions go through eutils
+    efetch. MLST can type an assembled genome directly, so this seeds a project
+    from GenBank/RefSeq without an SRA read download + assembly step. Shares the
+    downloader (bin/download_fasta.py) and UI with kSNP/GenoFLU."""
+    project_dir = _writable_project_dir(name)
+    accs = [a.strip() for a in (payload.accessions or []) if a.strip()]
+    if not accs:
+        raise HTTPException(400, "No accessions provided.")
+    download_dir = project_dir / "download"
+    download_dir.mkdir(parents=True, exist_ok=True)
+    script = _BIN_DIR / "download_fasta.py"
+    command = [sys.executable, "-u", str(script), "--outdir", str(download_dir)]
+    if not payload.rename:
+        command.append("--no-rename")
+    command += ["--accessions", *accs]
+    env = {
+        "PYTHONPATH": str(_BIN_DIR),
+        "PATH": os.environ.get("PATH", ""),
+        "PYTHONUNBUFFERED": "1",
+    }
+    job_id = job_manager.start_job(
+        name=f"fasta_download — {name} ({len(accs)})",
+        command=command, cwd=download_dir, env=env,
+    )
+    return JSONResponse({"job_id": job_id, "count": len(accs)})
+
+
 @app.get("/api/projects/{name}/sra-crosswalk")
 def api_project_sra_crosswalk(name: str):
     project_dir = _get_project_dir(name)
