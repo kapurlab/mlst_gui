@@ -28,6 +28,7 @@ _DEFAULT_MLST_DB = os.environ.get("MLST_DB", "")
 DEFAULTS: Dict[str, Any] = {
     "projects_root": str(Path.home() / "projects"),
     "shared_projects_root": _DEFAULT_SHARED_PROJECTS_ROOT,
+    "saved_project_roots": [],
     # Path to a relocated mlst PubMLST blast db dir (optional; "" => bundled).
     "mlst_db": _DEFAULT_MLST_DB,
     # Default assembly thread count for shovill/spades.
