@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
+import ThemeToggle from "./ThemeToggle";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -553,9 +554,12 @@ export default function App() {
             <p>Multi-locus sequence typing — autodetect the PubMLST scheme and report the sequence type</p>
           </div>
         </div>
-        <div className="status-pill">
-          <span className="dot" data-state={jobStatus} />
-          <span>{statusText}</span>
+        <div className="header-actions">
+          <ThemeToggle />
+          <div className="status-pill">
+            <span className="dot" data-state={jobStatus} />
+            <span>{statusText}</span>
+          </div>
         </div>
       </header>
 
