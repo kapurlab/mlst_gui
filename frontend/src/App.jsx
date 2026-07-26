@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import ThemeToggle from "./ThemeToggle";
+import ResultsPane from "./ResultsPane";
+import { useResults } from "./useResults";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -28,12 +30,25 @@ function fmtSize(bytes) {
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
+// The tool-specific columns of the shared Results table. Everything else
+// about the pane is identical across the suite.
+const RESULT_COLUMNS = [
+  { key: "scheme", label: "Scheme" },
+  { key: "st", label: "ST" },
+  { key: "alleles", label: "Alleles", align: "right" },
+  { key: "flags_note", label: "Note" },
+];
+
 export default function App() {
   const [projects, setProjects] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(true);
   const [newProjectName, setNewProjectName] = useState("");
   const [creatingProject, setCreatingProject] = useState(false);
   const [activeProject, setActiveProject] = useState(""); // project the Inputs pane targets
+  /* Every completed sample for the active project. Refreshed when a run
+     finishes rather than polled, matching the rest of the suite. */
+  const results = useResults(activeProject);
+  const [showResultsPane, setShowResultsPane] = useState(true);
   const [addPath, setAddPath] = useState({});       // proj -> import path string
   const [sraText, setSraText] = useState({});       // proj -> SRA accessions string
   const [fastaText, setFastaText] = useState({});   // proj -> genome-accession string
@@ -45,6 +60,9 @@ export default function App() {
   const [expanded, setExpanded] = useState({});          // project name → bool
   const [samples, setSamples] = useState({});            // project name → [sample]
   const [checkedKeys, setCheckedKeys] = useState({});    // key → {project, ...sample}
+  // Filter for the Projects sample list. Its check-all acts on what this
+  // filter leaves visible, never on the whole project.
+  const [projSampleFilter, setProjSampleFilter] = useState("");
   const [openResults, setOpenResults] = useState({});    // key → bool (inline results expanded)
   const [sampleResults, setSampleResults] = useState({}); // key → {loading, status, present, files}
   const [sampleTable, setSampleTable] = useState({});    // key → parsed mlst-table
@@ -87,6 +105,9 @@ export default function App() {
       })
       .catch(() => {});
     loadProjects();
+    // The Results table is where finished work is now read, so it
+    // has to reflect the run that just ended.
+    results.reload();
     fetch("./api/jobs")
       .then((r) => r.json())
       .then((jobs) => {
@@ -319,6 +340,36 @@ export default function App() {
   const sampleKey = (project, s) => `${project}::${s.sample}`;
   const isActive = (project, s) =>
     activeRun && activeRun.project === project && activeRun.sample === s.sample;
+
+  /* Samples currently VISIBLE in a project, i.e. after the filter box. The
+     check-all below must use this and nothing else: a "select all" that also
+     queues samples the user cannot see is how people accidentally run hundreds
+     of samples instead of the handful they filtered to. */
+  function visibleSamples(project) {
+    const q = projSampleFilter.trim().toLowerCase();
+    const list = samples[project] || [];
+    return q ? list.filter((s) => String(s.sample || "").toLowerCase().includes(q)) : list;
+  }
+
+  function checkAllState(project) {
+    const vis = visibleSamples(project);
+    const on = vis.filter((s) => checkedKeys[sampleKey(project, s)]).length;
+    return { total: vis.length, on, checked: vis.length > 0 && on === vis.length,
+             indeterminate: on > 0 && on < vis.length };
+  }
+
+  function toggleCheckAllVisible(project, checked) {
+    const vis = visibleSamples(project);
+    setCheckedKeys((m) => {
+      const next = { ...m };
+      vis.forEach((s) => {
+        const k = sampleKey(project, s);
+        if (checked) next[k] = { project, ...s };
+        else delete next[k];
+      });
+      return next;
+    });
+  }
 
   function toggleChecked(project, s) {
     const key = sampleKey(project, s);
@@ -717,7 +768,29 @@ export default function App() {
                             No FASTQ files yet — add some from the <strong>Inputs</strong> pane on the right.
                           </div>
                         )}
-                        {samples[proj.name]?.map((s) => {
+                        {(samples[proj.name] || []).length > 0 && (
+                          <div className="sample-item" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            <input
+                              type="checkbox"
+                              ref={(el) => { if (el) el.indeterminate = checkAllState(proj.name).indeterminate; }}
+                              checked={checkAllState(proj.name).checked}
+                              disabled={!visibleSamples(proj.name).length}
+                              onChange={(e) => toggleCheckAllVisible(proj.name, e.target.checked)}
+                              title="Select / deselect every sample shown here (honours the filter)"
+                            />
+                            <span className="muted" style={{ fontSize: 11 }}>
+                              {checkAllState(proj.name).on} of {checkAllState(proj.name).total} selected for run
+                            </span>
+                            <input
+                              type="search"
+                              placeholder="Filter samples…"
+                              value={projSampleFilter}
+                              onChange={(e) => setProjSampleFilter(e.target.value)}
+                              style={{ flex: "1 1 140px", minWidth: 120, fontSize: 12 }}
+                            />
+                          </div>
+                        )}
+                        {visibleSamples(proj.name).map((s) => {
                           const key = sampleKey(proj.name, s);
                           const res = sampleResults[key];
                           const tbl = sampleTable[key];
@@ -1097,7 +1170,7 @@ export default function App() {
           </button>
         </div>
         {showRun && (
-          <div className="row-grid row-grid-split">
+          <div className="row-grid row-grid-single">
             {/* LEFT — configure & run */}
             <section className="panel">
               <h2>Configure &amp; Run</h2>
@@ -1153,9 +1226,25 @@ export default function App() {
             </section>
 
             {/* RIGHT — current run status */}
-            <section className="panel">
+
+          </div>
+        )}
+
+        {/* ════════════════════════════════════════════════════════ */}
+        {/* SECTION: Results — every completed sample, not just the last  */}
+        {/* ════════════════════════════════════════════════════════ */}
+        <div className="row-header">
+          <h2>Results</h2>
+          <button className="ghost" onClick={() => setShowResultsPane(!showResultsPane)}>
+            {showResultsPane ? "Hide" : "Show"}
+          </button>
+        </div>
+        {showResultsPane && (
+          <div className="row-grid row-grid-split">
+            {/* LEFT — Current Run (live status for the batch in flight) */}
+<section className="panel">
               <div className="panel-header">
-                <h2>Current run</h2>
+                <h2>Current Run</h2>
                 {jobId && <span className="muted" style={{ fontSize: 12 }}>job {jobId.slice(0, 8)}</span>}
               </div>
               {activeRun ? (
@@ -1179,6 +1268,13 @@ export default function App() {
                 </div>
               )}
             </section>
+            {/* RIGHT — every completed sample, searchable (vSNP Step 1 model) */}
+            <ResultsPane
+              project={activeProject}
+              results={results}
+              columns={RESULT_COLUMNS}
+              labels={{ entity: "sample", sampleHeader: "Sample" }}
+            />
           </div>
         )}
 
