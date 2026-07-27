@@ -29,6 +29,7 @@ dependencies:
   # Scientific / parsing helpers
   - biopython
   - pandas
+  - openpyxl        # Results pane XLSX export (/api/projects/{name}/results.xlsx)
 
   # Web backend (FastAPI serves the GUI under OOD)
   - fastapi>=0.115.0
