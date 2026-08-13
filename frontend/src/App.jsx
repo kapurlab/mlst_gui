@@ -8,7 +8,10 @@ import { useResults } from "./useResults";
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-const APP_VERSION = "0.1.0";
+// Fallback ONLY: the header shows the backend-reported version (git
+// describe — the same string the Diagnostic Tools Dashboard shows) and
+// uses this constant just until that arrives / on installs without git.
+const APP_VERSION = "0.3.4";
 
 function fileIcon(name) {
   if (name.endsWith(".json")) return "🧾";
@@ -80,6 +83,9 @@ export default function App() {
   const [settingsDraft, setSettingsDraft] = useState({});
   const [folderBrowser, setFolderBrowser] = useState({ open: false, path: "", parent: null, entries: [], loading: false, error: "" });
   const [currentStep, setCurrentStep] = useState("");
+  // Version of the deployed checkout as reported by the backend (git
+  // describe — the same string the Diagnostic Tools Dashboard shows).
+  const [serverVersion, setServerVersion] = useState("");
 
   // Section visibility (collapsible flow)
   const [showSettings, setShowSettings] = useState(false);
@@ -97,6 +103,7 @@ export default function App() {
       .then((cfg) => {
         setThreads(cfg.threads || 8);
         setSettingsDraft(cfg);
+        setServerVersion(cfg.app_version || "");
       })
       .catch(() => {});
     fetch("./api/schemes")
@@ -601,7 +608,7 @@ export default function App() {
           <span className="app-logo" role="img" aria-label="DNA barcode" style={{ fontSize: 30 }}>🧬</span>
           <div>
             <h1>
-              MLST <span className="version-tag">v{APP_VERSION}</span>
+              MLST <span className="version-tag">{serverVersion || `v${APP_VERSION}`}</span>
             </h1>
             <p>Multi-locus sequence typing — autodetect the PubMLST scheme and report the sequence type</p>
           </div>
