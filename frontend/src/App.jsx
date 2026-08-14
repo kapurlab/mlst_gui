@@ -705,7 +705,11 @@ export default function App() {
                   <button type="button" className="ghost" onClick={() => removeSavedLocation(settingsDraft.projects_root)}
                     disabled={!(settingsDraft.saved_project_roots || []).includes(settingsDraft.projects_root)}>Remove</button>
                 </span>
-                <div className="form-hint">New projects are created under this root. Shared projects at /srv/kapurlab/projects/ are always visible. Click Save to apply.</div>
+                <div className="form-hint">New projects are created under this root.{" "}
+                  {settingsDraft.shared_projects_root
+                    ? <>Shared projects at <code>{settingsDraft.shared_projects_root}</code> are always visible.{" "}</>
+                    : null}
+                  Click Save to apply.</div>
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
                 <button onClick={saveSettings}>Save</button>
@@ -1049,7 +1053,7 @@ export default function App() {
                       <h3>Bring Your Own Reads / Assembly</h3>
                       <div className="row" style={{ margin: 0 }}>
                         <input
-                          placeholder="/srv/kapurlab/… folder, .fastq.gz, or .fasta file"
+                          placeholder="/path/to/folder, .fastq.gz, or .fasta file"
                           value={addPath[activeProject] || ""}
                           onChange={(e) => setAddPath((m) => ({ ...m, [activeProject]: e.target.value }))}
                           onKeyDown={(e) => { if (e.key === "Enter") linkLocal(activeProject); }}
